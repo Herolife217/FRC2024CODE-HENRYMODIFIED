@@ -1,26 +1,25 @@
 package frc.robot;
 
+import com.pathplanner.lib.auto.AutoBuilder;
+import com.pathplanner.lib.auto.NamedCommands;
+import com.pathplanner.lib.commands.PathPlannerAuto;
+
 import edu.wpi.first.wpilibj.GenericHID;
 import edu.wpi.first.wpilibj.Joystick;
 import edu.wpi.first.wpilibj.XboxController;
+import edu.wpi.first.wpilibj.smartdashboard.SendableChooser;
+import edu.wpi.first.wpilibj.smartdashboard.SmartDashboard;
 import edu.wpi.first.wpilibj2.command.Command;
 import edu.wpi.first.wpilibj2.command.InstantCommand;
 import edu.wpi.first.wpilibj2.command.button.JoystickButton;
-import frc.robot.commands.AccelerateShooter;
-import frc.robot.commands.Feed;
-import frc.robot.commands.HoldArm;
-import frc.robot.commands.HoldIntake;
-import frc.robot.commands.IntakeNoteAutomatic;
-import frc.robot.commands.RunArmClosedLoop;
-import frc.robot.commands.RunArmOpenLoop;
-import frc.robot.commands.RunIntakeOpenLoop;
-import frc.robot.commands.RunShooterAtVelocity;
-import frc.robot.commands.ShootNote;
-import frc.robot.commands.TeleopSwerve;
-
 import frc.robot.autos.*;
 import frc.robot.commands.*;
+import frc.robot.commands.arm.HoldArm;
+import frc.robot.commands.arm.RunArmClosedLoop;
 import frc.robot.subsystems.*;
+import frc.robot.subsystems.Swerve;
+import frc.robot.subsystems.Arm;
+
 
 /**
  * This class is where the bulk of the robot should be declared. Since Command-based is a
@@ -29,6 +28,8 @@ import frc.robot.subsystems.*;
  * subsystems, commands, and button mappings) should be declared here.
  */ 
 public class RobotContainer {
+    private final SendableChooser<Command> autoChooser;
+
     /* Controllers */
     private final XboxController driver = new XboxController(0);
 
@@ -43,9 +44,16 @@ public class RobotContainer {
     private final JoystickButton runArm = new JoystickButton(driver, XboxController.Button.kLeftBumper.value);
     /* Subsystems */
     private final Swerve s_Swerve = new Swerve();
-
-    /** The container for the robot. Contains subsystems, OI devices, and commands. */
+    public final Arm m_arm = new Arm(strafeAxis, rotationAxis);
+        /** The container for the robot. Contains subsystems, OI devices, and commands. */
     public RobotContainer () {
+        // Build an auto chooser. This will use Commands.none() as the default option.
+    autoChooser = AutoBuilder.buildAutoChooser();
+
+    // Another option that allows you to specify the default auto by its name
+    // autoChooser = AutoBuilder.buildAutoChooser("My Default Auto");
+
+    SmartDashboard.putData("Auto Chooser", autoChooser);
         s_Swerve.setDefaultCommand(
             new TeleopSwerve(
                 s_Swerve, 
@@ -55,11 +63,11 @@ public class RobotContainer {
                 () -> robotCentric.getAsBoolean()
             )
         );
-
+ // Register Named Commands
+         // NamedCommands.registerCommand("armClosedLoop", m_arm.RunArmClosedLoop());
         // Configure the button bindings
         configureButtonBindings();
     }
-
     /**
      * Use this method to define your button->command mappings. Buttons can be created by
      * instantiating a {@link GenericHID} or one of its subclasses ({@link
@@ -79,6 +87,6 @@ public class RobotContainer {
      */
     public Command getAutonomousCommand() {
         // An ExampleCommand will run in autonomous
-        return new exampleAuto(s_Swerve);
+        return autoChooser.getSelected();
     }
 }
