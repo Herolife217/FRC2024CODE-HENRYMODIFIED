@@ -20,13 +20,18 @@ import edu.wpi.first.wpilibj.smartdashboard.SmartDashboard;
 import edu.wpi.first.wpilibj2.command.SubsystemBase;
 
 import com.pathplanner.lib.auto.AutoBuilder;
+import com.pathplanner.lib.util.HolonomicPathFollowerConfig;
+import com.pathplanner.lib.util.PIDConstants;
 import com.pathplanner.lib.util.PathPlannerLogging;
+import com.pathplanner.lib.util.ReplanningConfig;
+
 import edu.wpi.first.wpilibj.smartdashboard.Field2d;;
 
 public class Swerve extends SubsystemBase {
     public SwerveDriveOdometry swerveOdometry;
     public SwerveModule[] mSwerveMods;
     public Pigeon2 gyro;
+    public SwerveDriveKinematics kinematics;
 
     public Swerve() {
         gyro = new Pigeon2(Constants.Swerve.pigeonID);
@@ -46,11 +51,11 @@ public class Swerve extends SubsystemBase {
         Timer.delay(1.0);
         resetModulesToAbsolute();
         swerveOdometry = new SwerveDriveOdometry(Constants.Swerve.swerveKinematics, getYaw(), getModulePositions());
-       /*  AutoBuilder.configureHolonomic(
+         AutoBuilder.configureHolonomic(
                         this::getPose, // Robot pose supplier
                         this::resetOdometry, // Method to reset odometry (will be called if your auto has a starting pose)
-                        this::getRobotRelativeSpeeds, // ChassisSpeeds supplier. MUST BE ROBOT RELATIVE
-                        this::drive, // Method that will drive the robot given ROBOT RELATIVE ChassisSpeeds
+                        this::getSpeeds, // ChassisSpeeds supplier. MUST BE ROBOT RELATIVE
+                        this::driveRobotRelative, // Method that will drive the robot given ROBOT RELATIVE ChassisSpeeds
                         new HolonomicPathFollowerConfig( // HolonomicPathFollowerConfig, this should likely live in your Constants class
                                 new PIDConstants(5.0, 0.0, 0.0), // Translation PID constants
                                 new PIDConstants(5.0, 0.0, 0.0), // Rotation PID constants
@@ -70,7 +75,8 @@ public class Swerve extends SubsystemBase {
                             return false;
                         },
                         this // Reference to this subsystem to set requirements
-                ); */
+                );
+                
             }
     
 
@@ -111,6 +117,16 @@ public class Swerve extends SubsystemBase {
     public void resetOdometry(Pose2d pose) {
         swerveOdometry.resetPosition(getYaw(), getModulePositions(), pose);
     }
+  public ChassisSpeeds getSpeeds() {
+    return kinematics.toChassisSpeeds(getModuleStates());
+  }
+  public void driveFieldRelative(ChassisSpeeds fieldRelativeSpeeds) {
+    driveRobotRelative(ChassisSpeeds.fromFieldRelativeSpeeds(fieldRelativeSpeeds, getPose().getRotation()));
+  }
+
+  public void driveRobotRelative(ChassisSpeeds robotRelativeSpeeds) {
+    ChassisSpeeds targetSpeeds = ChassisSpeeds.discretize(robotRelativeSpeeds, 0.02);
+  }
 
     public SwerveModuleState[] getModuleStates(){
         SwerveModuleState[] states = new SwerveModuleState[4];
@@ -141,6 +157,7 @@ public class Swerve extends SubsystemBase {
             mod.resetToAbsolute();
         }
     }
+  
 
     @Override
     public void periodic(){
